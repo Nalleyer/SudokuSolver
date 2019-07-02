@@ -1,4 +1,4 @@
-use crate::soduko::{Sudoku, Value};
+use crate::sudoku::{Sudoku, Value};
 
 use std::collections::HashSet;
 use std::iter::FromIterator;
