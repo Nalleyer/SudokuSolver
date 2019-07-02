@@ -4,13 +4,41 @@ use std::fmt;
 #[derive(PartialEq, Debug, Clone)]
 pub enum Value {
     Just(u8),
-    Nothing,
-    Unkown(Vec<u8>),
+    Blank,
+    Unknown(Vec<u8>),
+}
+
+impl fmt::Display for Value {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Value::Just(u) => write!(f, "{}", u),
+            Value::Blank => write!(f, "_"),
+            Value::Unknown(v) => write!(f, "{:?}", v)
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct View<'s>(Vec<&'s Value>);
+
+impl<'s> View<'s> {
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+}
+
+impl<'s> fmt::Display for View<'s> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for i in 0..self.len() {
+            write!(f, "{},", self.0[i])?;
+        }
+        Ok(())
+    }
 }
 
 #[derive(Clone, Debug)]
 pub struct Sudoku {
-    vec: Vec<Value>,
+    pub vec: Vec<Value>,
 }
 
 fn make_line(line: &str) -> Result<Vec<Value>, &'static str> {
@@ -26,14 +54,14 @@ fn make_line(line: &str) -> Result<Vec<Value>, &'static str> {
                     return Err("value must be in 1..9");
                 }
             } else {
-                vec.push(Value::Nothing);
+                vec.push(Value::Blank);
             }
         }
     }
     if vec.len() == 9 {
         Ok(vec)
     } else {
-        Err("parsing line failed")
+        Err("parsing line failed, expected 9 number per line")
     }
 }
 
@@ -41,7 +69,7 @@ impl Sudoku {
     pub fn new(str: &str) -> Result<Sudoku, Box<dyn Error>> {
         let mut vec: Vec<Value> = vec![];
         for line in str.lines() {
-            if !line.is_empty() {
+            if !line.trim().is_empty() {
                 vec.append(&mut make_line(line).unwrap());
             }
         }
@@ -54,27 +82,27 @@ impl Sudoku {
     // 2
     // ...
     // 8
-    pub fn get_row(&self, idx: usize) -> impl Iterator<Item = &Value> {
+    pub fn get_row(&self, idx: usize) -> View {
         if idx > 8 {
             panic!("invalid idx, getting row")
         } else {
-            self.vec.iter().skip(idx * 9).take(9)
+            View(self.vec.iter().skip(idx * 9).take(9).collect())
         }
     }
 
     // 0 1 2 ... 8
-    pub fn get_column(&self, idx: usize) -> impl Iterator<Item = &Value> {
+    pub fn get_column(&self, idx: usize) -> View {
         if idx > 8 {
             panic!("invalid idx, getting row")
         } else {
-            self.vec.iter().skip(idx).step_by(9)
+            View(self.vec.iter().skip(idx).step_by(9).collect())
         }
     }
 
     // 0 1 2
     // 3 4 5
     // 6 7 8
-    pub fn get_area(&self, idx: usize) -> impl Iterator<Item = &Value> {
+    pub fn get_area(&self, idx: usize) -> View {
         if idx > 8 {
             panic!("invalid idx, getting row")
         } else {
@@ -82,17 +110,20 @@ impl Sudoku {
             let big_column = idx % 3;
             let row_low = big_row * 3;
             let column_low = big_column * 3;
-            self.vec
-                .iter()
-                .enumerate()
-                .filter(move |(i, _)| {
-                    let row = i / 9;
-                    let column = i - (row * 9);
-                    let is_row_ok = row >= row_low && row < row_low + 3;
-                    let is_colulmn_ok = column >= column_low && column < column_low + 3;
-                    is_row_ok && is_colulmn_ok
-                })
-                .map(|(_, v)| v)
+            View(
+                self.vec
+                    .iter()
+                    .enumerate()
+                    .filter(move |(i, _)| {
+                        let row = i / 9;
+                        let column = i - (row * 9);
+                        let is_row_ok = row >= row_low && row < row_low + 3;
+                        let is_colulmn_ok = column >= column_low && column < column_low + 3;
+                        is_row_ok && is_colulmn_ok
+                    })
+                    .map(|(_, v)| v)
+                    .collect(),
+            )
         }
     }
 }
@@ -107,10 +138,10 @@ impl fmt::Display for Sudoku {
                     Value::Just(u) => {
                         write!(f, "{}", u)?;
                     }
-                    Value::Nothing => {
+                    Value::Blank => {
                         write!(f, " ")?;
                     }
-                    Value::Unkown(_) => {
+                    Value::Unknown(_) => {
                         write!(f, "?")?;
                     }
                 }

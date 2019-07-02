@@ -1,5 +1,5 @@
 mod soduko;
 mod solver;
 
-pub use soduko::{Value, Sudoku};
-pub use solver::{Solver};
+pub use soduko::{Sudoku, Value};
+pub use solver::Solver;
