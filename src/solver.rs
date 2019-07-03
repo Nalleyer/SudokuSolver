@@ -21,17 +21,21 @@ impl<'s> Solver<'s> {
     }
 
     fn scan_views(&mut self) {
-        println!("scan view");
+        println!("scan view a");
         for i in 0..9 {
             let fills = self.sudoku.get_area(i).fill();
             self.sudoku.fill(fills)
         }
         println!("{}", self.sudoku);
+        self.unknown_to_just();
+        println!("scan view r");
         for i in 0..9 {
             let fills = self.sudoku.get_row(i).fill();
             self.sudoku.fill(fills)
         }
         println!("{}", self.sudoku);
+        self.unknown_to_just();
+        println!("scan view c");
         for i in 0..9 {
             let fills = self.sudoku.get_column(i).fill();
             self.sudoku.fill(fills)
@@ -41,19 +45,22 @@ impl<'s> Solver<'s> {
     }
 
     fn scan_views_unique(&mut self) {
-        println!("scan view unique");
+        self.scan_views();
+        println!("scan view unique a");
         for i in 0..9 {
             let fills = self.sudoku.get_area(i).find_unique();
             self.sudoku.fill(fills)
         }
         self.scan_views();
         println!("{}", self.sudoku);
+        println!("scan view unique r");
         for i in 0..9 {
             let fills = self.sudoku.get_row(i).find_unique();
             self.sudoku.fill(fills)
         }
         self.scan_views();
         println!("{}", self.sudoku);
+        println!("scan view unique c");
         for i in 0..9 {
             let fills = self.sudoku.get_column(i).find_unique();
             self.sudoku.fill(fills)
@@ -69,8 +76,8 @@ impl<'s> Solver<'s> {
     }
 
     pub fn solve(&mut self) {
-        self.scan_views();
         for _ in 1..40 {
+            self.scan_views();
             self.scan_views_unique();
             if self.sudoku.is_solved() {
                 break

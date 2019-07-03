@@ -28,7 +28,7 @@ pub struct PValue {
     pub value: Value,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct View<'s>(Vec<&'s PValue>);
 
 impl<'s> View<'s> {
@@ -100,7 +100,7 @@ impl<'s> fmt::Display for View<'s> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Fill(usize, Value);
 
 #[derive(Clone, Debug)]
@@ -262,5 +262,33 @@ impl fmt::Display for Sudoku {
             }
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn fill_function() {
+        let mut set : HashSet<u8> = HashSet::new();
+        set.insert(4);
+        set.insert(6);
+        let pv7 = PValue{pos: 7, value: Value::Unknown(set)};
+        let view : View = View(vec![
+            &PValue{pos: 0, value: Value::Just(5)},
+            &PValue{pos: 1, value: Value::Just(2)},
+            &PValue{pos: 2, value: Value::Just(3)},
+            &PValue{pos: 3, value: Value::Just(8)},
+            &PValue{pos: 4, value: Value::Just(1)},
+            &PValue{pos: 5, value: Value::Just(7)},
+            &PValue{pos: 6, value: Value::Just(9)},
+            &pv7,
+            &PValue{pos: 8, value: Value::Just(6)}
+        ]);
+
+        let mut set : HashSet<u8> = HashSet::new();
+        set.insert(4);
+        assert_eq!(view.fill(), vec![Fill(7, Value::Unknown(set))]);
     }
 }
