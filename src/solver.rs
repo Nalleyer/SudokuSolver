@@ -12,12 +12,16 @@ impl<'s> Solver<'s> {
         Solver { sudoku }
     }
 
-    pub fn is_finished(&self) -> bool {
-        self.sudoku.vec.iter().all(|value| match value {
+    fn is_finished(&self) -> bool {
+        self.sudoku.vec.iter().all(|p_value| match &p_value.value {
             Value::Just(_) => true,
             Value::Blank => false,
             Value::Unknown(v) => v.len() == 1,
         })
+    }
+
+    fn first_fill(&self) {
+
     }
 }
 

@@ -18,8 +18,14 @@ impl fmt::Display for Value {
     }
 }
 
+#[derive(PartialEq, Debug, Clone)]
+pub struct PValue {
+    pub pos : usize,
+    pub value : Value,
+}
+
 #[derive(Debug)]
-pub struct View<'s>(Vec<&'s Value>);
+pub struct View<'s>(Vec<&'s PValue>);
 
 impl<'s> View<'s> {
     pub fn len(&self) -> usize {
@@ -30,32 +36,46 @@ impl<'s> View<'s> {
 impl<'s> fmt::Display for View<'s> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for i in 0..self.len() {
-            write!(f, "{},", self.0[i])?;
+            write!(f, "{},", self.0[i].value)?;
         }
         Ok(())
     }
+
+/*
+    fn fill(&self) -> Vec<(usize, Vec<u8>)> {
+        let 
+    }
+    */
 }
 
 #[derive(Clone, Debug)]
 pub struct Sudoku {
-    pub vec: Vec<Value>,
+    pub vec: Vec<PValue>,
 }
 
-fn make_line(line: &str) -> Result<Vec<Value>, &'static str> {
-    let mut vec: Vec<Value> = vec![];
+fn make_line(line: &str) -> Result<Vec<PValue>, &'static str> {
+    let mut vec: Vec<PValue> = vec![];
+    let mut pos: usize = 0;
     for c in line.chars() {
         if c == ' ' {
             continue;
         } else {
             if let Some(digit) = c.to_digit(10) {
                 if digit >= 1 && digit <= 9 {
-                    vec.push(Value::Just(digit as u8));
+                    vec.push(PValue {
+                        pos : pos,
+                        value : Value::Just(digit as u8),
+                    });
                 } else {
                     return Err("value must be in 1..9");
                 }
             } else {
-                vec.push(Value::Blank);
+                vec.push(PValue {
+                    pos : pos,
+                    value : Value::Blank,
+                });
             }
+            pos = pos + 1;
         }
     }
     if vec.len() == 9 {
@@ -67,7 +87,7 @@ fn make_line(line: &str) -> Result<Vec<Value>, &'static str> {
 
 impl Sudoku {
     pub fn new(str: &str) -> Result<Sudoku, Box<dyn Error>> {
-        let mut vec: Vec<Value> = vec![];
+        let mut vec: Vec<PValue> = vec![];
         for line in str.lines() {
             if !line.trim().is_empty() {
                 vec.append(&mut make_line(line).unwrap());
@@ -134,7 +154,7 @@ impl fmt::Display for Sudoku {
         for i in 0..9 {
             write!(f, "|")?;
             for j in 0..9 {
-                match self.vec[i * 9 + j] {
+                match self.vec[i * 9 + j].value {
                     Value::Just(u) => {
                         write!(f, "{}", u)?;
                     }
