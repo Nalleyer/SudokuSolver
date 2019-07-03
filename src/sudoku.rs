@@ -1,11 +1,15 @@
+use std::collections::HashSet;
+use std::collections::HashMap;
 use std::error::Error;
 use std::fmt;
+
+use crate::global::DIGITSET;
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum Value {
     Just(u8),
     Blank,
-    Unknown(Vec<u8>),
+    Unknown(HashSet<u8>),
 }
 
 impl fmt::Display for Value {
@@ -13,15 +17,15 @@ impl fmt::Display for Value {
         match self {
             Value::Just(u) => write!(f, "{}", u),
             Value::Blank => write!(f, "_"),
-            Value::Unknown(v) => write!(f, "{:?}", v)
+            Value::Unknown(s) => write!(f, "{:?}", s),
         }
     }
 }
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct PValue {
-    pub pos : usize,
-    pub value : Value,
+    pub pos: usize,
+    pub value: Value,
 }
 
 #[derive(Debug)]
@@ -30,6 +34,60 @@ pub struct View<'s>(Vec<&'s PValue>);
 impl<'s> View<'s> {
     pub fn len(&self) -> usize {
         self.0.len()
+    }
+
+    pub fn set(&self) -> HashSet<u8> {
+        let mut set: HashSet<u8> = HashSet::new();
+        for pv in self.0.iter() {
+            if let Value::Just(u) = &pv.value {
+                set.insert(*u);
+            }
+        }
+        set
+    }
+
+    pub fn fill(&self) -> Vec<Fill> {
+        let my_set = self.set();
+        self.0
+            .iter()
+            .map(|pv| match &(*pv).value {
+                Value::Unknown(set) => {
+                    Some(Fill(pv.pos, Value::Unknown(set.difference(&my_set).cloned().collect())))
+                }
+                Value::Blank => Some(Fill(
+                    pv.pos, 
+                    Value::Unknown(DIGITSET.difference(&my_set).cloned().collect()),
+                )),
+                Value::Just(_) => None,
+            })
+            .filter_map(|x| x)
+            .collect()
+    }
+
+    pub fn find_unique(&self) -> Vec<Fill> {
+        let mut count_map : HashMap<u8, usize> = HashMap::new();
+        for pv in self.0.iter() {
+            if let Value::Unknown(set) = &pv.value {
+                for u in set.iter() {
+                    let count = count_map.entry(*u).or_insert(0);
+                    *count += 1;
+                }
+            }
+        }
+
+        self.0.iter().filter_map(|pv| {
+            if let Value::Unknown(set) = &pv.value {
+                for u in set.iter() {
+                    let count = count_map.get(u).unwrap();
+                    if *count == 1 {
+                        return Some(Fill(pv.pos, Value::Just(*u)));
+                    }
+                }
+                None
+            } else {
+                None
+            }
+        }).collect()
     }
 }
 
@@ -40,20 +98,17 @@ impl<'s> fmt::Display for View<'s> {
         }
         Ok(())
     }
-
-/*
-    fn fill(&self) -> Vec<(usize, Vec<u8>)> {
-        let 
-    }
-    */
 }
+
+#[derive(Debug)]
+pub struct Fill(usize, Value);
 
 #[derive(Clone, Debug)]
 pub struct Sudoku {
     pub vec: Vec<PValue>,
 }
 
-fn make_line(line: &str, pos : &mut usize) -> Result<Vec<PValue>, &'static str> {
+fn make_line(line: &str, pos: &mut usize) -> Result<Vec<PValue>, &'static str> {
     let mut vec: Vec<PValue> = vec![];
     for c in line.chars() {
         if c == ' ' {
@@ -62,16 +117,16 @@ fn make_line(line: &str, pos : &mut usize) -> Result<Vec<PValue>, &'static str> 
             if let Some(digit) = c.to_digit(10) {
                 if digit >= 1 && digit <= 9 {
                     vec.push(PValue {
-                        pos : *pos,
-                        value : Value::Just(digit as u8),
+                        pos: *pos,
+                        value: Value::Just(digit as u8),
                     });
                 } else {
                     return Err("value must be in 1..9");
                 }
             } else {
                 vec.push(PValue {
-                    pos : *pos,
-                    value : Value::Blank,
+                    pos: *pos,
+                    value: Value::Blank,
                 });
             }
             *pos = *pos + 1;
@@ -86,7 +141,7 @@ fn make_line(line: &str, pos : &mut usize) -> Result<Vec<PValue>, &'static str> 
 
 impl Sudoku {
     pub fn new(str: &str) -> Result<Sudoku, Box<dyn Error>> {
-        let mut pos : usize = 0;
+        let mut pos: usize = 0;
         let mut vec: Vec<PValue> = vec![];
         for line in str.lines() {
             if !line.trim().is_empty() {
@@ -146,23 +201,55 @@ impl Sudoku {
             )
         }
     }
+
+    pub fn fill(&mut self, fills: Vec<Fill>) {
+        for Fill(pos, new_value) in fills {
+            self.vec[pos].value = new_value;
+        }
+    }
+
+    pub fn unknown_to_just(&mut self) {
+        for pv in &mut self.vec {
+            if let Value::Unknown(v) = &mut pv.value {
+                if v.len() == 1 {
+                    pv.value = Value::Just(*v.iter().collect::<Vec<&u8>>()[0]);
+                }
+            }
+        }
+    }
+
+    pub fn is_solved(&self) -> bool {
+        self.vec.iter().all(|pv| {
+            if let Value::Just(_) = &pv.value {
+                true
+            } else {
+                false
+            }
+        })
+    }
 }
 
 impl fmt::Display for Sudoku {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "+---+---+---+\n")?;
+        write!(f, "{}\n", String::from("-").repeat(90 + 12))?;
         for i in 0..9 {
             write!(f, "|")?;
             for j in 0..9 {
-                match self.vec[i * 9 + j].value {
+                match &self.vec[i * 9 + j].value {
                     Value::Just(u) => {
-                        write!(f, "{}", u)?;
+                        write!(f, "{}{},", u, String::from(" ").repeat(9))?;
                     }
                     Value::Blank => {
-                        write!(f, " ")?;
+                        write!(f, "{},", String::from(" ").repeat(10))?;
                     }
-                    Value::Unknown(_) => {
-                        write!(f, "?")?;
+                    Value::Unknown(set) => {
+                        write!(f, "☆")?;
+                        let mut vec : Vec<u8> = set.iter().cloned().collect::<Vec<u8>>();
+                        vec.sort();
+                        for v in vec.iter() {
+                            write!(f, "{}", v)?;
+                        }
+                        write!(f, "{},", String::from(" ").repeat(9 - set.len()))?;
                     }
                 }
                 if (j + 1) % 3 == 0 {
@@ -171,7 +258,7 @@ impl fmt::Display for Sudoku {
             }
             write!(f, "\n")?;
             if (i + 1) % 3 == 0 {
-                write!(f, "+---+---+---+\n")?;
+                write!(f, "{}\n", String::from("-").repeat(90 + 12))?;
             }
         }
         Ok(())
