@@ -53,9 +53,8 @@ pub struct Sudoku {
     pub vec: Vec<PValue>,
 }
 
-fn make_line(line: &str) -> Result<Vec<PValue>, &'static str> {
+fn make_line(line: &str, pos : &mut usize) -> Result<Vec<PValue>, &'static str> {
     let mut vec: Vec<PValue> = vec![];
-    let mut pos: usize = 0;
     for c in line.chars() {
         if c == ' ' {
             continue;
@@ -63,7 +62,7 @@ fn make_line(line: &str) -> Result<Vec<PValue>, &'static str> {
             if let Some(digit) = c.to_digit(10) {
                 if digit >= 1 && digit <= 9 {
                     vec.push(PValue {
-                        pos : pos,
+                        pos : *pos,
                         value : Value::Just(digit as u8),
                     });
                 } else {
@@ -71,11 +70,11 @@ fn make_line(line: &str) -> Result<Vec<PValue>, &'static str> {
                 }
             } else {
                 vec.push(PValue {
-                    pos : pos,
+                    pos : *pos,
                     value : Value::Blank,
                 });
             }
-            pos = pos + 1;
+            *pos = *pos + 1;
         }
     }
     if vec.len() == 9 {
@@ -87,10 +86,11 @@ fn make_line(line: &str) -> Result<Vec<PValue>, &'static str> {
 
 impl Sudoku {
     pub fn new(str: &str) -> Result<Sudoku, Box<dyn Error>> {
+        let mut pos : usize = 0;
         let mut vec: Vec<PValue> = vec![];
         for line in str.lines() {
             if !line.trim().is_empty() {
-                vec.append(&mut make_line(line).unwrap());
+                vec.append(&mut make_line(line, &mut pos).unwrap());
             }
         }
 

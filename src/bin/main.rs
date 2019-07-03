@@ -12,6 +12,7 @@ fn main() {
 
     let s: Sudoku = Sudoku::new(&contents).unwrap();
     println!("{}", s);
+    println!("{:?}", s);
     println!("{}", s.get_row(8));
     println!("{}", s.get_column(8));
     println!("{}", s.get_area(5));
