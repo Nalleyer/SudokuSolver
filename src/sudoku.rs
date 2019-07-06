@@ -125,7 +125,10 @@ fn make_line(line: &str, pos: &mut usize) -> Result<Vec<PValue>, &'static str> {
                         value: Value::Just(digit as u8),
                     });
                 } else {
-                    return Err("value must be in 1..9");
+                    vec.push(PValue {
+                        pos: *pos,
+                        value: Value::Blank,
+                    });
                 }
             } else {
                 vec.push(PValue {
