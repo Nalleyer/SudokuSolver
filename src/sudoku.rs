@@ -1,5 +1,5 @@
-use std::collections::HashSet;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::error::Error;
 use std::fmt;
 
@@ -51,11 +51,12 @@ impl<'s> View<'s> {
         self.0
             .iter()
             .map(|pv| match &(*pv).value {
-                Value::Unknown(set) => {
-                    Some(Fill(pv.pos, Value::Unknown(set.difference(&my_set).cloned().collect())))
-                }
+                Value::Unknown(set) => Some(Fill(
+                    pv.pos,
+                    Value::Unknown(set.difference(&my_set).cloned().collect()),
+                )),
                 Value::Blank => Some(Fill(
-                    pv.pos, 
+                    pv.pos,
                     Value::Unknown(DIGITSET.difference(&my_set).cloned().collect()),
                 )),
                 Value::Just(_) => None,
@@ -65,7 +66,7 @@ impl<'s> View<'s> {
     }
 
     pub fn find_unique(&self) -> Vec<Fill> {
-        let mut count_map : HashMap<u8, usize> = HashMap::new();
+        let mut count_map: HashMap<u8, usize> = HashMap::new();
         for pv in self.0.iter() {
             if let Value::Unknown(set) = &pv.value {
                 for u in set.iter() {
@@ -75,19 +76,22 @@ impl<'s> View<'s> {
             }
         }
 
-        self.0.iter().filter_map(|pv| {
-            if let Value::Unknown(set) = &pv.value {
-                for u in set.iter() {
-                    let count = count_map.get(u).unwrap();
-                    if *count == 1 {
-                        return Some(Fill(pv.pos, Value::Just(*u)));
+        self.0
+            .iter()
+            .filter_map(|pv| {
+                if let Value::Unknown(set) = &pv.value {
+                    for u in set.iter() {
+                        let count = count_map.get(u).unwrap();
+                        if *count == 1 {
+                            return Some(Fill(pv.pos, Value::Just(*u)));
+                        }
                     }
+                    None
+                } else {
+                    None
                 }
-                None
-            } else {
-                None
-            }
-        }).collect()
+            })
+            .collect()
     }
 }
 
@@ -103,7 +107,7 @@ impl<'s> fmt::Display for View<'s> {
 #[derive(Debug, PartialEq)]
 pub struct Fill(usize, Value);
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Sudoku {
     pub vec: Vec<PValue>,
 }
@@ -244,7 +248,7 @@ impl fmt::Display for Sudoku {
                     }
                     Value::Unknown(set) => {
                         write!(f, "☆")?;
-                        let mut vec : Vec<u8> = set.iter().cloned().collect::<Vec<u8>>();
+                        let mut vec: Vec<u8> = set.iter().cloned().collect::<Vec<u8>>();
                         vec.sort();
                         for v in vec.iter() {
                             write!(f, "{}", v)?;
@@ -271,23 +275,50 @@ mod test {
 
     #[test]
     fn fill_function() {
-        let mut set : HashSet<u8> = HashSet::new();
+        let mut set: HashSet<u8> = HashSet::new();
         set.insert(4);
         set.insert(6);
-        let pv7 = PValue{pos: 7, value: Value::Unknown(set)};
-        let view : View = View(vec![
-            &PValue{pos: 0, value: Value::Just(5)},
-            &PValue{pos: 1, value: Value::Just(2)},
-            &PValue{pos: 2, value: Value::Just(3)},
-            &PValue{pos: 3, value: Value::Just(8)},
-            &PValue{pos: 4, value: Value::Just(1)},
-            &PValue{pos: 5, value: Value::Just(7)},
-            &PValue{pos: 6, value: Value::Just(9)},
+        let pv7 = PValue {
+            pos: 7,
+            value: Value::Unknown(set),
+        };
+        let view: View = View(vec![
+            &PValue {
+                pos: 0,
+                value: Value::Just(5),
+            },
+            &PValue {
+                pos: 1,
+                value: Value::Just(2),
+            },
+            &PValue {
+                pos: 2,
+                value: Value::Just(3),
+            },
+            &PValue {
+                pos: 3,
+                value: Value::Just(8),
+            },
+            &PValue {
+                pos: 4,
+                value: Value::Just(1),
+            },
+            &PValue {
+                pos: 5,
+                value: Value::Just(7),
+            },
+            &PValue {
+                pos: 6,
+                value: Value::Just(9),
+            },
             &pv7,
-            &PValue{pos: 8, value: Value::Just(6)}
+            &PValue {
+                pos: 8,
+                value: Value::Just(6),
+            },
         ]);
 
-        let mut set : HashSet<u8> = HashSet::new();
+        let mut set: HashSet<u8> = HashSet::new();
         set.insert(4);
         assert_eq!(view.fill(), vec![Fill(7, Value::Unknown(set))]);
     }
